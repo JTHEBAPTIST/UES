@@ -244,15 +244,27 @@ def retrieve_screener_data(filters, parameters):
 st.title('FactSet Screener')
 st.write('Retrieve data based on selected filters and parameters')
 
-# Display filters
-st.write('Filters applied:', FILTERS)
+# Display filters in a readable format
+st.subheader('Filters applied:')
+for key, value in FILTERS.items():
+    st.write(f"**{key}:** {value}")
 
-# Display parameter options
-st.write('Selected parameters:', PARAMETERS)
+# Allow users to choose how many parameters to display
+st.subheader('Selected parameters:')
+selected_param_count = st.slider("Choose number of parameters to display:", 
+                                 min_value=1, 
+                                 max_value=len(PARAMETERS),
+                                 value=10)
+
+# Show the selected parameters in chunks based on the user’s selection
+selected_parameters = PARAMETERS[:selected_param_count]
+st.write(selected_parameters)
 
 # Retrieve and display data
-data = retrieve_screener_data(FILTERS, PARAMETERS)
+st.subheader('Screener Results')
+data = retrieve_screener_data(FILTERS, selected_parameters)
+
 if not data.empty:
-    st.dataframe(data)
+    st.dataframe(data)  # Display the data in a scrollable table
 else:
     st.write("No data available.")
