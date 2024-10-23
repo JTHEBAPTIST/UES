@@ -30,27 +30,27 @@ if uploaded_file is not None:
     st.write("Columns available in the DataFrame:")
     st.write(data.columns.tolist())
 
-    # Pull the precalculated Z-scores
+   # Pull the best of IQR and W columns
     def pulling_precalculated_data(df):
         # Define a list of tuples containing the output column and its corresponding input columns
         factors = [
-            ('Value', 'Value Score (IQR)', 'Value Score (W)'),
-            ('Momentum', 'Momentum Score (IQR)', 'Momentum Score (W)'),
-            ('PEG', 'PEG Score (IQR)', 'PEG Score (W)'),
-            ('Earnings Surprise', 'Earnings Surprise Score (IQR)', 'Earnings Surprise Score (W)'),
-            ('ROE', 'Ret on Avg Total Equity (IQR)', 'Ret on Avg Total Equity (W)'),
-            ('ROA', 'Ret on Avg Total Assets (IQR)', 'Ret on Avg Total Assets (W)'),
-            ('Net Profit Margin', 'Net Income Margin (IQR)', 'Net Income Margin (W)'),
-            ('5Y Growth Gross Profit', 'Chg in GP/Sales Score (IQR)', 'Chg in GP/Sales Score (W)'),
-            ('5Y NI-BV Growth', 'Chg in NI/BV Score (IQR)', 'Chg in NI/BV Score (W)'),
-            ('5Y NI-Asset Growth', 'Chg in NI/Assets Score (IQR)', 'Chg in NI/Assets Score (W)'),
-            ('Dividend Payout Ratio', 'Div Pd Score (IQR)', 'Div Pd Score (W)'),
-            ('Pct Change Shares Outstanding', 'Chg Shs Outstdg Score (IQR)', 'Chg Shs Outstdg Score (W)'),
-            ('Debt-to-Equity', 'D/E Score (IQR)', 'D/E Score (W)'),
-            ('Pre-tax Interest Coverage', 'PreTax Int Cov Score (IQR)', 'PreTax Int Cov Score (W)'),
-            ('Accruals', 'Norm Accrual Score (IQR)', 'Norm Accrual Score (W)'),
-            ('Beta', 'Norm Beta (IQR)', 'Norm Beta (W)'),
-            ('Final Model Score', 'Final Model Score (IQR)', 'Final Model Score (W)')
+            ('Value_z', 'Value Score (IQR)', 'Value Score (W)'),
+            ('Momentum_z', 'Momentum Score (IQR)', 'Momentum Score (W)'),
+            ('PEG_z', 'PEG Score (IQR)', 'PEG Score (W)'),
+            ('Earnings Surprise_z', 'Earnings Surprise Score (IQR)', 'Earnings Surprise Score (W)'),
+            ('ROE_z', 'Ret on Avg Total Equity (IQR)', 'Ret on Avg Total Equity (W)'),
+            ('ROA_z', 'Ret on Avg Total Assets (IQR)', 'Ret on Avg Total Assets (W)'),
+            ('Net Profit Margin_z', 'Net Income Margin (IQR)', 'Net Income Margin (W)'),
+            ('5Y Growth Gross Profit_z', 'Chg in GP/Sales Score (IQR)', 'Chg in GP/Sales Score (W)'),
+            ('5Y NI-BV Growth_z', 'Chg in NI/BV Score (IQR)', 'Chg in NI/BV Score (W)'),
+            ('5Y NI-Asset Growth_z', 'Chg in NI/Assets Score (IQR)', 'Chg in NI/Assets Score (W)'),
+            ('Dividend Payout Ratio_z', 'Div Pd Score (IQR)', 'Div Pd Score (W)'),
+            ('Pct Change Shares Outstanding_z', 'Chg Shs Outstdg Score (IQR)', 'Chg Shs Outstdg Score (W)'),
+            ('Debt-to-Equity_z', 'D/E Score (IQR)', 'D/E Score (W)'),
+            ('Pre-tax Interest Coverage_z', 'PreTax Int Cov Score (IQR)', 'PreTax Int Cov Score (W)'),
+            ('Accruals_z', 'Norm Accrual Score (IQR)', 'Norm Accrual Score (W)'),
+            ('Beta_z', 'Norm Beta (IQR)', 'Norm Beta (W)'),
+            ('Final Model Score_z', 'Final Model Score (IQR)', 'Final Model Score (W)')
         ]
     
         for output_col, col_IQR, col_W in factors:
@@ -65,6 +65,7 @@ if uploaded_file is not None:
     
         return df
 
+    # Pull the best Z-scores from the available columns
     data = pulling_precalculated_data(data)
 
     # Define and calculate group scores
@@ -79,7 +80,7 @@ if uploaded_file is not None:
         data[group_name] = data[group_factors].mean(axis=1)
 
     data['Total Composite Z-score'] = data[list(groups.keys())].mean(axis=1)
-    data['Difference'] = data['Overall Model Score'] - data['Total Composite Z-score']
+    data['Difference'] = data['Modified Final Model 3 Score (IQR)'] - data['Total Composite Z-score']
 
     # Create the final DataFrame
     final_columns = ['Company Name', 'Exchange Name (VND)', 'CUSIP',
