@@ -1,3 +1,5 @@
+pip install streamlit pandas numpy openpyxl xlsxwriter
+
 import streamlit as st
 import pandas as pd 
 import numpy as np
