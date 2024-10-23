@@ -13,8 +13,18 @@ if uploaded_file is not None:
     data = pd.read_excel(uploaded_file, header=3)
     st.write("File uploaded successfully.")
 
+   # Convert 'In Buy List' to numeric
+    data['In Buy List'] = pd.to_numeric(data['In Buy List'], errors='coerce')
+
+    # Handle NaN values if any (choose one option)
+    # Option 1: Drop rows where 'In Buy List' is NaN
+    data = data.dropna(subset=['In Buy List'])
+    # Option 2: Fill NaN values with 0
+    # data['In Buy List'] = data['In Buy List'].fillna(0)
+
     # Filter stocks where 'In Buy List' > 0
     data = data[data['In Buy List'] > 0]
+
 
     # Print columns to verify correct loading
     st.write("Columns available in the DataFrame:")
