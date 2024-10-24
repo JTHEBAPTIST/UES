@@ -1,8 +1,7 @@
+import streamlit as st
 import pandas as pd
 import numpy as np
-
-# Set pandas option to opt into future behavior regarding downcasting
-pd.set_option('future.no_silent_downcasting', True)
+from io import BytesIO
 
 # Function to process the uploaded data
 def process_multi_factor_model(uploaded_file):
@@ -28,7 +27,7 @@ def process_multi_factor_model(uploaded_file):
             ('5Y Growth Gross Profit_z', 'Chg in GP/Sales Score (IQR)', 'Chg in GP/Sales Score (W)'),
             ('5Y NI-BV Growth_z', 'Chg in NI/BV Score (IQR)', 'Chg in NI/BV Score (W)'),
             ('5Y NI-Asset Growth_z', 'Chg in NI/Assets Score (IQR)', 'Chg in NI/Assets Score (W)'),
-            ('Dividend Payout Ratio_z', 'Payout Score (IQR)', 'Payout Score (W)'),  # Updated name
+            ('Dividend Payout Ratio_z', 'Payout Score (IQR)', 'Payout Score (W)'),
             ('Pct Change Shares Outstanding_z', 'Chg Shs Outstdg Score (IQR)', 'Chg Shs Outstdg Score (W)'),
             ('Debt-to-Equity_z', 'D/E Score (IQR)', 'D/E Score (W)'),
             ('Pre-tax Interest Coverage_z', 'PreTax Int Cov Score (IQR)', 'PreTax Int Cov Score (W)'),
@@ -38,12 +37,9 @@ def process_multi_factor_model(uploaded_file):
         ]
         
         for output_col, col_IQR, col_W in factors:
-            # Check if either of the columns exists in the DataFrame
             if col_IQR in df.columns or col_W in df.columns:
-                # If both columns exist, fill missing values in col_IQR with col_W
                 df[output_col] = df[col_IQR].fillna(df[col_W])
             else:
-                print(f"Warning: Both {col_IQR} and {col_W} are missing. Skipping {output_col}.")
                 df[output_col] = np.nan
         
         return df
@@ -64,34 +60,44 @@ def process_multi_factor_model(uploaded_file):
 
     data['Total Composite Z-score'] = data[list(groups.keys())].mean(axis=1)
 
-    # Check if 'Modified Final Model 3 Score (IQR)' exists
     if 'Modified Final Model 3 Score (IQR)' in data.columns:
         data['Difference'] = data['Modified Final Model 3 Score (IQR)'] - data['Total Composite Z-score']
     else:
         data['Difference'] = np.nan
 
-    # Create the final DataFrame
-    final_columns = ['Company Name', 'Value_z', 'Momentum_z', 'Profitability Group', 'Total Composite Z-score', 'Difference']
+    # Prepare the final data
+    final_columns = ['Company Name', 'Value_z', 'Momentum_z', 'Profitability Group', 'Growth Group', 'Payout Group', 'Safety Group', 'Total Composite Z-score', 'Difference']
     final_data = data[final_columns]
 
-    # Return the final processed data
     return final_data
 
-# Main program to manually input the file name
-if __name__ == "__main__":
-    # Ask for the Excel file
-    uploaded_file = input("Please provide the Excel file name (with .xlsx extension) you want to process: ")
-
-    try:
+# Streamlit app
+def main():
+    st.title("Upload and Process Excel File")
+    
+    uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
+    
+    if uploaded_file is not None:
         # Process the file
         processed_data = process_multi_factor_model(uploaded_file)
 
-        # Ask for output file name
-        output_file = input("Please provide the name for the output Excel file (with .xlsx extension): ")
-        processed_data.to_excel(output_file, index=False)
-        print(f"Processed file saved as {output_file}")
+        # Display processed data
+        st.write("Processed Data:")
+        st.dataframe(processed_data)
 
-    except FileNotFoundError:
-        print("Error: File not found. Please check the file name and try again.")
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        # Download processed data
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            processed_data.to_excel(writer, index=False, sheet_name='Processed Data')
+            writer.save()
+        output.seek(0)
+
+        st.download_button(
+            label="Download Processed Data as Excel",
+            data=output,
+            file_name="processed_output.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+if __name__ == "__main__":
+    main()
