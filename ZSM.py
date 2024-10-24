@@ -1,38 +1,22 @@
-import streamlit as st
-import pandas as pd 
+import pandas as pd
 import numpy as np
-from io import BytesIO
 
-st.title('Multi-factor Model Data Processor')
+# Set pandas option to opt into future behavior regarding downcasting
+pd.set_option('future.no_silent_downcasting', True)
 
-# File uploader
-uploaded_file = st.file_uploader("Please upload your Excel file:", type="xlsx")
-
-if uploaded_file is not None:
+# Function to process the uploaded data
+def process_multi_factor_model(uploaded_file):
     # Read the file
     data = pd.read_excel(uploaded_file, header=3)
-    st.write("File uploaded successfully.")
 
-   # Convert 'In Buy List' to numeric
+    # Convert 'In Buy List' to numeric
     data['In Buy List'] = pd.to_numeric(data['In Buy List'], errors='coerce')
-
-    # Handle NaN values if any (choose one option)
-    # Option 1: Drop rows where 'In Buy List' is NaN
-    data = data.dropna(subset=['In Buy List'])
-    # Option 2: Fill NaN values with 0
-    # data['In Buy List'] = data['In Buy List'].fillna(0)
 
     # Filter stocks where 'In Buy List' > 0
     data = data[data['In Buy List'] > 0]
 
-
-    # Print columns to verify correct loading
-    st.write("Columns available in the DataFrame:")
-    st.write(data.columns.tolist())
-
-   # Pull the best of IQR and W columns
+    # Pull the best of IQR and W columns
     def pulling_precalculated_data(df):
-        # Define a list of tuples containing the output column and its corresponding input columns
         factors = [
             ('Value_z', 'Value Score (IQR)', 'Value Score (W)'),
             ('Momentum_z', 'Momentum Score (IQR)', 'Momentum Score (W)'),
@@ -44,7 +28,7 @@ if uploaded_file is not None:
             ('5Y Growth Gross Profit_z', 'Chg in GP/Sales Score (IQR)', 'Chg in GP/Sales Score (W)'),
             ('5Y NI-BV Growth_z', 'Chg in NI/BV Score (IQR)', 'Chg in NI/BV Score (W)'),
             ('5Y NI-Asset Growth_z', 'Chg in NI/Assets Score (IQR)', 'Chg in NI/Assets Score (W)'),
-            ('Dividend Payout Ratio_z', 'Div Pd Score (IQR)', 'Div Pd Score (W)'),
+            ('Dividend Payout Ratio_z', 'Payout Score (IQR)', 'Payout Score (W)'),  # Updated name
             ('Pct Change Shares Outstanding_z', 'Chg Shs Outstdg Score (IQR)', 'Chg Shs Outstdg Score (W)'),
             ('Debt-to-Equity_z', 'D/E Score (IQR)', 'D/E Score (W)'),
             ('Pre-tax Interest Coverage_z', 'PreTax Int Cov Score (IQR)', 'PreTax Int Cov Score (W)'),
@@ -52,17 +36,16 @@ if uploaded_file is not None:
             ('Beta_z', 'Norm Beta (IQR)', 'Norm Beta (W)'),
             ('Final Model Score_z', 'Final Model Score (IQR)', 'Final Model Score (W)')
         ]
-    
+        
         for output_col, col_IQR, col_W in factors:
-            if col_IQR in df.columns and col_W in df.columns:
-                df[output_col] = np.where(df[col_IQR].notna(), df[col_IQR], df[col_W])
-            elif col_IQR in df.columns:
-                df[output_col] = df[col_IQR]
-            elif col_W in df.columns:
-                df[output_col] = df[col_W]
+            # Check if either of the columns exists in the DataFrame
+            if col_IQR in df.columns or col_W in df.columns:
+                # If both columns exist, fill missing values in col_IQR with col_W
+                df[output_col] = df[col_IQR].fillna(df[col_W])
             else:
-                df[output_col] = np.nan  # Assign NaN if neither column exists
-    
+                print(f"Warning: Both {col_IQR} and {col_W} are missing. Skipping {output_col}.")
+                df[output_col] = np.nan
+        
         return df
 
     # Pull the best Z-scores from the available columns
@@ -80,32 +63,35 @@ if uploaded_file is not None:
         data[group_name] = data[group_factors].mean(axis=1)
 
     data['Total Composite Z-score'] = data[list(groups.keys())].mean(axis=1)
-    data['Difference'] = data['Modified Final Model 3 Score (IQR)'] - data['Total Composite Z-score']
+
+    # Check if 'Modified Final Model 3 Score (IQR)' exists
+    if 'Modified Final Model 3 Score (IQR)' in data.columns:
+        data['Difference'] = data['Modified Final Model 3 Score (IQR)'] - data['Total Composite Z-score']
+    else:
+        data['Difference'] = np.nan
 
     # Create the final DataFrame
-    final_columns = ['Company Name', 'Exchange Name (VND)', 'CUSIP',
-                     'FactSet Econ Sector', 'FactSet Ind', 'Gen Sec Type Desc',
-                     'Overall Model Score', 'Profitability Group', 'Growth Group',
-                     'Payout Group', 'Safety Group', 'Total Composite Z-score', 'Difference']
+    final_columns = ['Company Name', 'Value_z', 'Momentum_z', 'Profitability Group', 'Total Composite Z-score', 'Difference']
     final_data = data[final_columns]
 
-    # Display final data
-    st.write("Final Data:")
-    st.dataframe(final_data)
+    # Return the final processed data
+    return final_data
 
-    # Save to XLSX in memory
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        final_data.to_excel(writer, index=False, sheet_name='Sheet1')
-        writer.save()
-        processed_data = output.getvalue()
+# Main program to manually input the file name
+if __name__ == "__main__":
+    # Ask for the Excel file
+    uploaded_file = input("Please provide the Excel file name (with .xlsx extension) you want to process: ")
 
-    # Provide download button
-    st.download_button(
-        label="Download Output Excel File",
-        data=processed_data,
-        file_name='multi_factor_model_output.xlsx',
-        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+    try:
+        # Process the file
+        processed_data = process_multi_factor_model(uploaded_file)
 
-    st.success("Data processing complete. You can download the output file above.")
+        # Ask for output file name
+        output_file = input("Please provide the name for the output Excel file (with .xlsx extension): ")
+        processed_data.to_excel(output_file, index=False)
+        print(f"Processed file saved as {output_file}")
+
+    except FileNotFoundError:
+        print("Error: File not found. Please check the file name and try again.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
